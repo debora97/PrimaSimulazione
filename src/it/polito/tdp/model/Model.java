@@ -25,7 +25,7 @@ public class Model {
 	private List<Event> eventi;
 	private List<Distretto> listaDistretto;
 	
-	private Map<Integer, Distretto> mappaDistretti;
+	 Map<Integer, Distretto> mappaDistretti;
 	EventsDao dao= new EventsDao();
 	
 	public Model() {
@@ -65,6 +65,7 @@ public class Model {
 					double peso;
 					peso= LatLngTool.distanceInRadians(punto1, punto2); 
 					Graphs.addEdge(grafo, d1, d2, peso);
+					//System.out.println(d1.getId()+" "+ d2.getId()+" "+ peso);
 				}
 			}
 		}
@@ -93,13 +94,54 @@ public class Model {
 	public String scriviVicini() {
 		String s="";
 		for (Distretto d: this.listaDistretto) {
-			s+="\nDistretto "+d.getId()+" vicino a \n";
+			s+="Distretto "+d.getId()+" vicino a \n";
 			List<Distretto> vicini = new LinkedList<>(this.getVicini(d));
 			for(Distretto d1: vicini) {
-				s+="\nDistretto "+d1.getId();
+				s+="Distretto "+d1.getId()+"\n";
 			}
 		}
 		return s;
+	}
+	
+	public List<Event> getEventiData(int anno, int mese, int giorno){
+		//LocalDate data = LocalDate.of(anno, mese, giorno);
+		this.eventi= new LinkedList<Event>(dao.listEventiDaConsiderare(anno, mese, giorno));
+		return this.eventi;
+	}
+	
+	public List<Distretto> getViciniId(int id){
+		List<Distretto> vicini = new LinkedList<>();
+		Distretto d= this.mappaDistretti.get(id);
+		vicini= Graphs.neighborListOf(grafo, d);
+		Collections.sort(vicini, new Comparator<Distretto>() {
+
+			@Override
+			public int compare(Distretto o1, Distretto o2) {
+				DefaultWeightedEdge e1 = grafo.getEdge(d, o1);
+				DefaultWeightedEdge e2 = grafo.getEdge(d, o2);
+				Double peso1 = grafo.getEdgeWeight(e1);
+				Double peso2 = grafo.getEdgeWeight(e2);
+				return peso1.compareTo(peso2);
+			}
+		});
+		return vicini;
+	}
+	
+	public Distretto getDistrettoMenoCrimini(int anno) {
+		Distretto d=dao.getDistrettoMenoCrimini(anno, this.mappaDistretti);
+		return d;
+	}
+
+	public String simula(int n, int anno, int mese, int giorno) {
+		
+			
+			Simulatore sim = new Simulatore();
+			sim.init( grafo, n , this.getDistrettoMenoCrimini(anno), this.getEventiData(anno, mese, giorno));
+			//sim.init(n, dao.getDistrettoMenoCrimini(anno, this.mappaDistretti), dao.listEventiDaConsiderare(anno, mese, giorno), grafo);
+			sim.run();
+			String s="il numero di eventi mal gestito e'"+sim.getEventiMalGestiti();
+			return s;
+		
 	}
 	
 	
